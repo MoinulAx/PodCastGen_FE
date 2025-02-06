@@ -4,6 +4,10 @@ import "./PodcastGenerator.css";
 
 const PodcastGenerator = () => {
   const [transcript, setTranscript] = useState("");
+  const [title, setTitle] = useState("Sample Podcast Title");
+  const [numCommentators, setNumCommentators] = useState(1);
+  const [commentators, setCommentators] = useState([""]);
+  const [length, setLength] = useState(30);
   const [podcastScript, setPodcastScript] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -37,9 +41,15 @@ const PodcastGenerator = () => {
     return formattedText;
   };
 
+  const handleCommentatorChange = (index, value) => {
+    const updatedCommentators = [...commentators];
+    updatedCommentators[index] = value;
+    setCommentators(updatedCommentators);
+  };
+
   const generatePodcast = async () => {
     if (!transcript.trim()) {
-      setError("Please enter a transcript before generating the podcast.");
+      setError("Please provide a transcript to generate the podcast.");
       return;
     }
 
@@ -48,15 +58,12 @@ const PodcastGenerator = () => {
     setPodcastScript(null);
 
     try {
-      const response = await axios.post(
-        `${REACT_APP_AI_API_URL}`,
-        {
-          title: "Sample Podcast Title",
-          commentators: "John Doe, Jane Smith",
-          length: 30,
-          description: transcript,
-        }
-      );
+      const response = await axios.post(`${REACT_APP_AI_API_URL}`, {
+        title,
+        commentators: commentators.join(", "),
+        length,
+        description: transcript,
+      });
 
       const parsedScript = parsePodcastScript(response.data);
       setPodcastScript(parsedScript);
@@ -72,18 +79,74 @@ const PodcastGenerator = () => {
     <div className="podcast-container">
       <h1 className="title">🎙️ Podcast Generator</h1>
 
-      <textarea
-        className="transcript-box"
-        placeholder="Paste your transcript here..."
-        value={transcript}
-        onChange={(e) => setTranscript(e.target.value)}
-      ></textarea>
+      <div className="input-fields">
+        <div>
+          <label>Title:</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Enter podcast title"
+          />
+        </div>
+
+        <div>
+          <label>Number of Commentators:</label>
+          <select
+            value={numCommentators}
+            onChange={(e) => {
+              const num = parseInt(e.target.value, 10);
+              setNumCommentators(num);
+              setCommentators((prev) => {
+                const updated = [...prev];
+                while (updated.length < num) updated.push("");
+                return updated.slice(0, num);
+              });
+            }}
+          >
+            {[1, 2, 3, 4].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {Array.from({ length: numCommentators }).map((_, index) => (
+          <div key={index}>
+            <label>Commentator {index + 1}:</label>
+            <input
+              type="text"
+              value={commentators[index] || ""}
+              onChange={(e) => handleCommentatorChange(index, e.target.value)}
+              placeholder={`Enter name of commentator ${index + 1}`}
+            />
+          </div>
+        ))}
+
+        <textarea
+          className="transcript-box"
+          placeholder="Paste your transcript here..."
+          value={transcript}
+          onChange={(e) => setTranscript(e.target.value)}
+        ></textarea>
+
+        <div>
+          <label>Length (minutes):</label>
+          <input
+            type="number"
+            value={length}
+            onChange={(e) => setLength(parseInt(e.target.value, 10))}
+            placeholder="Enter podcast length"
+          />
+        </div>
+      </div>
 
       <button className="generate-btn" onClick={generatePodcast} disabled={loading}>
         {loading ? "Generating..." : "Generate Podcast ✨"}
       </button>
 
-      {loading && <div className="loading-spinner"></div>}  {/* Loading spinner here */}
+      {loading && <div className="loading-spinner"></div>}
 
       {error && <p className="error-message">{error}</p>}
 
